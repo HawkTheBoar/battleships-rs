@@ -28,7 +28,7 @@ impl Ship {
         if self.parts_alive > 0 {
             return None;
         }
-        Some(&mut self.parts)
+        Some(&self.parts)
     }
     pub fn is_alive(&self) -> bool {
         self.parts_alive > 0

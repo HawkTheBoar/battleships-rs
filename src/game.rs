@@ -112,7 +112,7 @@ where
     U: GamePlayer,
 {
     fn setup(&mut self, ships: Vec<ShipBlueprint>) {
-        // TODO: use lifetimes this clone takes too much time :sob:
+        // TODO: use lifetimes this clone is okay but triggers me
         self.player1.setup(ships.clone());
         self.player2.setup(ships);
         // let player = self.player();
