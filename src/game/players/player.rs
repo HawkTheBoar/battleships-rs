@@ -1,3 +1,4 @@
+use crate::game::player_board::{BoardError, ViewBoard};
 use crate::game::players::GamePlayer;
 use crate::game::{
     Setup,
@@ -9,11 +10,13 @@ use crate::game::{
 use std::io::stdin;
 pub struct Player {
     board: PlayerBoard,
+    opponent_board: ViewBoard,
 }
 impl Player {
     pub fn new() -> Self {
         Self {
             board: PlayerBoard::new(),
+            opponent_board: ViewBoard::new(),
         }
     }
 }
@@ -30,8 +33,11 @@ impl GamePlayer for Player {
     fn is_game_over(&self) -> bool {
         self.board.is_game_over()
     }
-    fn process_shot(&mut self, p: Point) -> ShotResult {
+    fn process_shot(&mut self, p: Point) -> Result<ShotResult, BoardError> {
         self.board.process_shot(p)
+    }
+    fn update_view_board(&mut self, shot: ShotResult, p: Point) -> Result<(), BoardError> {
+        self.opponent_board.register_shot(shot, p)
     }
 }
 impl Setup<Vec<ShipBlueprint>> for Player {

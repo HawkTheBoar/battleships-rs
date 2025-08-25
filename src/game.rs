@@ -40,6 +40,14 @@ where
             current_player: 1,
         }
     }
+    // returns (current player, opponent_player)
+    pub fn players(&mut self) -> (&mut dyn GamePlayer, &mut dyn GamePlayer) {
+        if self.is_current_p1() {
+            (&mut self.player1, &mut self.player2)
+        } else {
+            (&mut self.player2, &mut self.player1)
+        }
+    }
     pub fn current_player_mut(&mut self) -> &mut dyn GamePlayer {
         if self.is_current_p1() {
             &mut self.player1
@@ -75,13 +83,26 @@ where
 {
     fn run(&mut self) {
         loop {
-            let current_player = self.current_player_mut();
-            let point = current_player.choose_point();
-            self.switch();
+            let (curr, opp) = self.players();
+            let point = curr.choose_point();
+            let Ok(shot) = opp.process_shot(point) else {
+                // write error and continue
+                println!("Processing error, continuing");
+                continue;
+            };
+            curr.update_view_board(shot, point)
+                .expect("Out of bounds, unable to show this shot");
+
+            println!(
+                "player {} shoots at {} {}",
+                self.current_player, point.x, point.y
+            );
             if self.is_game_over() {
                 // TODO: write winner
+                println!("Winner player: {}", self.current_player);
                 break;
             }
+            self.switch();
         }
     }
 }

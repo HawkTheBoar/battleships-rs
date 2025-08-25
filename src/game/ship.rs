@@ -23,12 +23,12 @@ impl Ship {
             name,
         }
     }
-    pub fn hit(&mut self) -> Option<&Self> {
+    pub fn hit(&mut self) -> Option<&Vec<Point>> {
         self.parts_alive -= 1;
         if self.parts_alive > 0 {
             return None;
         }
-        Some(self)
+        Some(&mut self.parts)
     }
     pub fn is_alive(&self) -> bool {
         self.parts_alive > 0

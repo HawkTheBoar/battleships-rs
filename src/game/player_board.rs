@@ -9,6 +9,14 @@ use crate::game::tile::Tile;
 #[derive(Debug, PartialEq, Eq)]
 pub enum BoardError {
     ShipPlacementError(PlacementError),
+    ShotRegisterError,
+    Shot(ShotError),
+}
+#[derive(Debug, PartialEq, Eq)]
+pub enum ShotError {
+    AlreadyShot,
+    HiddenDoesntExistOnPlayerBoards,
+    OutOfBounds,
 }
 #[derive(Debug, PartialEq, Eq)]
 pub enum PlacementError {
@@ -27,10 +35,39 @@ impl Display for BoardError {
 }
 impl Error for BoardError {}
 
-const WIDTH: usize = 10;
-const HEIGHT: usize = 10;
+pub const WIDTH: usize = 10;
+pub const HEIGHT: usize = 10;
 
-pub enum ShotResult {}
+#[derive(Debug)]
+pub enum ShotResult<'a> {
+    Hit,
+    Miss,
+    ShipSunk(&'a Vec<Point>),
+}
+pub struct ViewBoard {
+    grid: [[Tile; WIDTH]; HEIGHT],
+}
+impl ViewBoard {
+    pub fn new() -> Self {
+        Self {
+            grid: [[Tile::Hidden; WIDTH]; HEIGHT],
+        }
+    }
+    pub fn register_shot(&mut self, shot: ShotResult, p: Point) -> Result<(), BoardError> {
+        if p.x >= WIDTH || p.y >= HEIGHT {
+            return Err(BoardError::ShotRegisterError);
+        }
+        let tile = &mut self.grid[p.y][p.x];
+        match shot {
+            ShotResult::Hit => *tile = Tile::Hit,
+            ShotResult::Miss => *tile = Tile::Miss,
+            ShotResult::ShipSunk(points) => points
+                .iter()
+                .for_each(|p| self.grid[p.y][p.x] = Tile::SunkenShip),
+        }
+        Ok(())
+    }
+}
 pub struct PlayerBoard {
     grid: [[Tile; WIDTH]; HEIGHT],
     pub ships: HashMap<u8, Ship>,
@@ -74,8 +111,29 @@ impl PlayerBoard {
         Ok(())
     }
     // return some state enum or tile whatever
-    pub fn process_shot(&mut self, p: Point) -> ShotResult {
-        todo!()
+    pub fn process_shot(&mut self, p: Point) -> Result<ShotResult, BoardError> {
+        if p.x >= WIDTH || p.y >= HEIGHT {
+            return Err(BoardError::Shot(ShotError::OutOfBounds));
+        }
+        match self.grid[p.y][p.x] {
+            Tile::Ship(id) => {
+                let ship: &mut Ship = self.ships.get_mut(&id).expect("ship not exists");
+                let Some(ship_parts) = ship.hit() else {
+                    self.grid[p.y][p.x] = Tile::Hit;
+                    return Ok(ShotResult::Hit);
+                };
+                ship_parts
+                    .iter()
+                    .for_each(|point| self.grid[point.y][point.x] = Tile::SunkenShip);
+                Ok(ShotResult::ShipSunk(ship_parts))
+            }
+            Tile::Empty => Ok(ShotResult::Miss),
+
+            Tile::SunkenShip => Err(BoardError::Shot(ShotError::AlreadyShot)),
+            Tile::Hit => Err(BoardError::Shot(ShotError::AlreadyShot)),
+            Tile::Miss => Err(BoardError::Shot(ShotError::AlreadyShot)),
+            Tile::Hidden => Err(BoardError::Shot(ShotError::HiddenDoesntExistOnPlayerBoards)),
+        }
     }
     pub fn is_game_over(&self) -> bool {
         self.ships.iter().all(|(_, ship)| !ship.is_alive())
@@ -85,7 +143,7 @@ impl PlayerBoard {
 #[cfg(test)]
 mod test {
     use crate::game::{
-        player_board::{BoardError, PlacementError, PlayerBoard},
+        player_board::{BoardError, PlacementError, PlayerBoard, ShotResult},
         point::Point,
         rotation::Rotation,
         ship::ShipBlueprint,
@@ -175,5 +233,14 @@ mod test {
             res2.expect_err("should be err"),
             BoardError::ShipPlacementError(PlacementError::ShipOverlap)
         );
+    }
+    #[test]
+    fn shot_sinks_ship() {
+        let (mut board, sm) = default_setup();
+        let p = Point::new(0, 0);
+        board
+            .place_ship(&sm, p, Rotation::None)
+            .expect("should be ok to place");
+        let res = board.process_shot(p).expect("should be ok");
     }
 }
