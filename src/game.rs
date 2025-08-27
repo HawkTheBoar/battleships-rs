@@ -6,12 +6,7 @@ pub mod ship;
 mod tile;
 
 use crate::game::players::GamePlayer;
-use crate::game::{
-    player_board::PlayerBoard,
-    point::Point,
-    rotation::Rotation,
-    ship::{Ship, ShipBlueprint},
-};
+use crate::game::ship::ShipBlueprint;
 pub trait GameMode {
     fn run(&mut self);
 }
@@ -46,20 +41,6 @@ where
             (&mut self.player1, &mut self.player2)
         } else {
             (&mut self.player2, &mut self.player1)
-        }
-    }
-    pub fn current_player_mut(&mut self) -> &mut dyn GamePlayer {
-        if self.is_current_p1() {
-            &mut self.player1
-        } else {
-            &mut self.player2
-        }
-    }
-    pub fn opponent_player_mut(&mut self) -> &mut dyn GamePlayer {
-        if !self.is_current_p1() {
-            &mut self.player1
-        } else {
-            &mut self.player2
         }
     }
     pub fn switch(&mut self) {
@@ -104,6 +85,7 @@ where
             }
             self.switch();
         }
+        // restore terminal
     }
 }
 impl<T, U> Setup<Vec<ShipBlueprint>> for SinglePlayer<T, U>

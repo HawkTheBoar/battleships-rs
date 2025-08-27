@@ -1,3 +1,4 @@
+pub mod board_builder;
 use std::collections::HashMap;
 use std::error::Error;
 use std::fmt::Display;
@@ -22,6 +23,7 @@ pub enum ShotError {
 pub enum PlacementError {
     ShipOverlap,
     OutOfBounds,
+    PlacementExit,
 }
 impl Display for PlacementError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -79,6 +81,28 @@ impl PlayerBoard {
             ships: HashMap::new(),
         }
     }
+    pub fn can_place_ship(
+        &self,
+        blueprint: &ShipBlueprint,
+        pos: Point,
+        rotation: Rotation,
+    ) -> Result<(), BoardError> {
+        for point in blueprint.parts.iter() {
+            let (x, y) = (point.x + pos.x, point.y + pos.y);
+
+            // TODO: Implement checking for rotated ships
+            if !Self::is_point_valid(Point { x, y }) {
+                return Err(BoardError::ShipPlacementError(PlacementError::OutOfBounds));
+            }
+            if self.grid[y][x] != Tile::Empty {
+                return Err(BoardError::ShipPlacementError(PlacementError::ShipOverlap));
+            }
+        }
+        Ok(())
+    }
+    pub fn is_point_valid(p: Point) -> bool {
+        p.x < WIDTH && p.y < HEIGHT
+    }
     pub fn place_ship(
         &mut self,
         blueprint: &ShipBlueprint,
@@ -86,19 +110,12 @@ impl PlayerBoard {
         rotation: Rotation,
     ) -> Result<(), BoardError> {
         // check if can place
-        let mut points: Vec<Point> = Vec::with_capacity(blueprint.parts.capacity());
-        for point in blueprint.parts.iter() {
-            let (x, y) = (point.x + pos.x, point.y + pos.y);
-
-            // TODO: Implement checking for rotated ships
-            if x >= WIDTH || y >= HEIGHT {
-                return Err(BoardError::ShipPlacementError(PlacementError::OutOfBounds));
-            }
-            if self.grid[y][x] != Tile::Empty {
-                return Err(BoardError::ShipPlacementError(PlacementError::ShipOverlap));
-            }
-            points.push(Point::new(x, y));
-        }
+        self.can_place_ship(blueprint, pos, rotation)?;
+        let points: Vec<Point> = blueprint
+            .parts
+            .iter()
+            .map(|p| Point::new(pos.x + p.x, pos.y + p.y))
+            .collect();
 
         // TODO: Optimize this so there is no clone
         // Maybe use Rc? i dont know anything better xdd

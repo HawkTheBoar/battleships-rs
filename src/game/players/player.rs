@@ -1,3 +1,7 @@
+use crossterm::event::Event;
+use ratatui::layout::Rect;
+
+use crate::game::player_board::board_builder::BoardBuilder;
 use crate::game::player_board::{BoardError, ViewBoard};
 use crate::game::players::GamePlayer;
 use crate::game::{
@@ -7,20 +11,23 @@ use crate::game::{
     rotation::Rotation,
     ship::ShipBlueprint,
 };
+use std::cell::RefCell;
 use std::io::stdin;
-pub struct Player {
+pub struct Player<'a> {
     board: PlayerBoard,
     opponent_board: ViewBoard,
+    terminal: &'a mut ratatui::DefaultTerminal,
 }
-impl Player {
-    pub fn new() -> Self {
+impl<'a> Player<'a> {
+    pub fn new(terminal: &'a mut ratatui::DefaultTerminal) -> Self {
         Self {
             board: PlayerBoard::new(),
             opponent_board: ViewBoard::new(),
+            terminal,
         }
     }
 }
-impl GamePlayer for Player {
+impl<'a> GamePlayer for Player<'a> {
     fn choose_point(&self) -> Point {
         let mut buf = String::new();
         stdin().read_line(&mut buf).unwrap();
@@ -40,17 +47,23 @@ impl GamePlayer for Player {
         self.opponent_board.register_shot(shot, p)
     }
 }
-impl Setup<Vec<ShipBlueprint>> for Player {
+impl<'a> Setup<Vec<ShipBlueprint>> for Player<'a> {
     fn setup(&mut self, ships: Vec<ShipBlueprint>) {
+        let mut frame = self.terminal.get_frame();
         for ship in ships.iter() {
             // TODO: add selecting of coordinates to put the ship
-            loop {
-                let pos = self.choose_point();
 
-                if self.board.place_ship(ship, pos, Rotation::None).is_ok() {
-                    break;
-                }
-            }
+            let mut builder = BoardBuilder::new(&self.board, ship);
+            let (pos, rot) = loop {
+                self.terminal.draw(|f| builder.render(f, f.area()));
+                let event = crossterm::event::read();
+                let Ok(Event::Key(e)) = event else { continue };
+                let res = builder.handle_key(e);
+                let Ok(Some(placement)) = res else { continue };
+                break placement;
+            };
+            // this wont ever be an error
+            self.board.place_ship(ship, pos, rot).unwrap();
         }
     }
 }
