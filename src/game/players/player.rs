@@ -1,8 +1,10 @@
 use crossterm::event::Event;
 use ratatui::layout::Rect;
 
+use crate::game::cursor::Cursor;
 use crate::game::player_board::board_builder::BoardBuilder;
-use crate::game::player_board::{BoardError, ViewBoard};
+use crate::game::player_board::board_view::BoardView;
+use crate::game::player_board::{BoardError, HEIGHT, ViewBoard, WIDTH, board_view};
 use crate::game::players::GamePlayer;
 use crate::game::{
     Setup,
@@ -16,25 +18,45 @@ use std::io::stdin;
 pub struct Player<'a> {
     board: PlayerBoard,
     opponent_board: ViewBoard,
-    terminal: &'a mut ratatui::DefaultTerminal,
+    terminal: RefCell<&'a mut ratatui::DefaultTerminal>,
+    last_cursor_pos: Option<Point>,
 }
 impl<'a> Player<'a> {
     pub fn new(terminal: &'a mut ratatui::DefaultTerminal) -> Self {
         Self {
             board: PlayerBoard::new(),
             opponent_board: ViewBoard::new(),
-            terminal,
+            terminal: RefCell::new(terminal),
+            last_cursor_pos: None,
         }
+    }
+    // opponent_board is passed in so that you can select points in choose_point
+    fn render_view(&self, opponent_board: &BoardView) {
+        // TWO BOARD VIEWS FIRST OPPONENT, SECOND SELF
+        self.terminal
+            .borrow_mut()
+            .draw(|f| opponent_board.render(f, f.area()));
     }
 }
 impl<'a> GamePlayer for Player<'a> {
-    fn choose_point(&self) -> Point {
-        let mut buf = String::new();
-        stdin().read_line(&mut buf).unwrap();
-        let t: Vec<&str> = buf.split_whitespace().collect();
-        Point {
-            x: t.first().unwrap().parse().unwrap(),
-            y: t.get(1).unwrap().parse().unwrap(),
+    fn choose_point(&mut self) -> Point {
+        let last_pos = match self.last_cursor_pos {
+            Some(pos) => pos,
+            None => Point::new(0, 0),
+        };
+        let mut opponent_board = BoardView::new(
+            self.opponent_board.get_grid(),
+            Some(Cursor::new(last_pos.x, last_pos.y, WIDTH, HEIGHT)),
+            "choose a point",
+        );
+        loop {
+            self.render_view(&opponent_board);
+            let event = crossterm::event::read();
+            let Ok(Event::Key(e)) = event else { continue };
+            let res = opponent_board.handle_key(e);
+            let Ok(Some(placement)) = res else { continue };
+            self.last_cursor_pos = Some(placement);
+            return placement;
         }
     }
     fn is_game_over(&self) -> bool {
@@ -49,13 +71,14 @@ impl<'a> GamePlayer for Player<'a> {
 }
 impl<'a> Setup<Vec<ShipBlueprint>> for Player<'a> {
     fn setup(&mut self, ships: Vec<ShipBlueprint>) {
-        let mut frame = self.terminal.get_frame();
         for ship in ships.iter() {
             // TODO: add selecting of coordinates to put the ship
 
             let mut builder = BoardBuilder::new(&self.board, ship);
             let (pos, rot) = loop {
-                self.terminal.draw(|f| builder.render(f, f.area()));
+                self.terminal
+                    .borrow_mut()
+                    .draw(|f| builder.render(f, f.area()));
                 let event = crossterm::event::read();
                 let Ok(Event::Key(e)) = event else { continue };
                 let res = builder.handle_key(e);

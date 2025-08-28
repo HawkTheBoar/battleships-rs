@@ -13,7 +13,7 @@ use ratatui::{
     widgets::{Block, Row, Table, Widget},
 };
 
-use crate::game::tile::Tile;
+use crate::game::{cursor::Cursor, player_board::HEIGHT, tile::Tile};
 use crate::game::{
     player_board::{BoardError, PlayerBoard, WIDTH},
     point::Point,
@@ -21,7 +21,7 @@ use crate::game::{
     ship::ShipBlueprint,
 };
 pub struct BoardBuilder<'a> {
-    cursor_pos: Point,
+    cursor: Cursor,
     rotation: Rotation,
     current_ship: &'a ShipBlueprint,
     board: &'a PlayerBoard,
@@ -30,7 +30,7 @@ impl<'a> BoardBuilder<'a> {
     pub fn new(board: &'a PlayerBoard, ship: &'a ShipBlueprint) -> Self {
         Self {
             board,
-            cursor_pos: Point::new(0, 0),
+            cursor: Cursor::new(0, 0, WIDTH, HEIGHT),
             current_ship: ship,
             rotation: Rotation::Horizontal,
         }
@@ -56,37 +56,31 @@ impl<'a> BoardBuilder<'a> {
 
     fn move_cursor(&mut self, dx: isize, dy: isize) {
         // Implement movement logic with boundary checks
-        let pos = self.cursor_pos;
-        let (x, y) = (pos.x, pos.y);
-        let (Some(new_x), Some(new_y)) = (x.checked_add_signed(dx), y.checked_add_signed(dy))
-        else {
-            return;
-        };
-        // TODO: Check if every point is valid in board
-        self.cursor_pos = Point::new(new_x, new_y)
+        let _ = self.cursor.move_by(dx, dy);
     }
 
     fn rotate_ship(&mut self) {
         // Rotate the ship and check validity
         self.rotation = self.rotation.next();
+        // Update bounds for cursor
     }
 
     fn place_ship(&self) -> Result<Option<(Point, Rotation)>, BoardError> {
         // Validate placement and return position if valid
         if let Err(err) =
             self.board
-                .can_place_ship(self.current_ship, self.cursor_pos, self.rotation)
+                .can_place_ship(self.current_ship, self.cursor.pos(), self.rotation)
         {
             Err(err)
         } else {
-            Ok(Some((self.cursor_pos, self.rotation)))
+            Ok(Some((self.cursor.pos(), self.rotation)))
         }
     }
     pub fn render(&self, f: &mut Frame, rect: Rect) {
         let title = Line::from(" Position your ships! ");
         let block = Block::bordered().title(title).border_set(border::THICK);
 
-        let cursor = self.cursor_pos;
+        let cursor = self.cursor.pos();
         // TODO: maybe optimize this someday?
         let ship_preview = self
             .current_ship
@@ -97,7 +91,7 @@ impl<'a> BoardBuilder<'a> {
         let can_place =
             match self
                 .board
-                .can_place_ship(self.current_ship, self.cursor_pos, self.rotation)
+                .can_place_ship(self.current_ship, self.cursor.pos(), self.rotation)
             {
                 Ok(_) => true,
                 Err(_) => false,

@@ -1,3 +1,4 @@
+pub mod cursor;
 pub mod player_board;
 pub mod players;
 pub mod point;
@@ -5,6 +6,7 @@ mod rotation;
 pub mod ship;
 mod tile;
 
+use crate::game::player_board::board_view::{self, BoardView};
 use crate::game::players::GamePlayer;
 use crate::game::ship::ShipBlueprint;
 pub trait GameMode {
@@ -68,19 +70,13 @@ where
             let point = curr.choose_point();
             let Ok(shot) = opp.process_shot(point) else {
                 // write error and continue
-                println!("Processing error, continuing");
                 continue;
             };
             curr.update_view_board(shot, point)
                 .expect("Out of bounds, unable to show this shot");
 
-            println!(
-                "player {} shoots at {} {}",
-                self.current_player, point.x, point.y
-            );
             if self.is_game_over() {
                 // TODO: write winner
-                println!("Winner player: {}", self.current_player);
                 break;
             }
             self.switch();

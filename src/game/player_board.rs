@@ -1,4 +1,5 @@
 pub mod board_builder;
+pub mod board_view;
 use std::collections::HashMap;
 use std::error::Error;
 use std::fmt::Display;
@@ -55,6 +56,9 @@ impl ViewBoard {
             grid: [[Tile::Hidden; WIDTH]; HEIGHT],
         }
     }
+    pub fn get_grid(&self) -> &[[Tile; WIDTH]; HEIGHT] {
+        &self.grid
+    }
     pub fn register_shot(&mut self, shot: ShotResult, p: Point) -> Result<(), BoardError> {
         if p.x >= WIDTH || p.y >= HEIGHT {
             return Err(BoardError::ShotRegisterError);
@@ -80,6 +84,9 @@ impl PlayerBoard {
             grid: [[Tile::Empty; WIDTH]; HEIGHT],
             ships: HashMap::new(),
         }
+    }
+    pub fn get_grid(&self) -> &[[Tile; WIDTH]; HEIGHT] {
+        &self.grid
     }
     pub fn can_place_ship(
         &self,
@@ -129,7 +136,7 @@ impl PlayerBoard {
     }
     // return some state enum or tile whatever
     pub fn process_shot(&mut self, p: Point) -> Result<ShotResult, BoardError> {
-        if p.x >= WIDTH || p.y >= HEIGHT {
+        if !Self::is_point_valid(p) {
             return Err(BoardError::Shot(ShotError::OutOfBounds));
         }
         match self.grid[p.y][p.x] {

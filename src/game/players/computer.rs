@@ -1,5 +1,6 @@
 use rand::random_range;
 
+use crate::game::player_board::board_view::BoardView;
 use crate::game::player_board::{BoardError, HEIGHT, WIDTH};
 use crate::game::players::GamePlayer;
 use crate::game::rotation::Rotation;
@@ -21,7 +22,7 @@ impl Computer {
     }
 }
 impl GamePlayer for Computer {
-    fn choose_point(&self) -> Point {
+    fn choose_point(&mut self) -> Point {
         let x = random_range(0..WIDTH);
         let y = random_range(0..HEIGHT);
         Point::new(x, y)

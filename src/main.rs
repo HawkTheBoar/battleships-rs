@@ -20,6 +20,6 @@ fn main() {
     ];
     game.setup(ships);
     println!("Running game");
-    // game.run();
+    game.run();
     ratatui::restore();
 }
