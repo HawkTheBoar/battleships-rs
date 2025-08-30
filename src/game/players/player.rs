@@ -32,7 +32,7 @@ impl Player {
         }
     }
     // opponent_board is passed in so that you can select points in choose_point
-    fn render_view(&self, opponent_board: &BoardView) {
+    pub fn render_view(&self, opponent_board: &BoardView) {
         // TWO BOARD VIEWS FIRST OPPONENT, SECOND SELF
         let self_board = BoardView::new(self.board.get_grid(), None, "Your ships");
         self.terminal.borrow_mut().draw(|f| {
@@ -65,9 +65,17 @@ impl GamePlayer for Player {
             let event = crossterm::event::read();
             let Ok(Event::Key(e)) = event else { continue };
             let res = opponent_board.handle_key(e);
-            let Ok(Some(placement)) = res else { continue };
-            self.last_cursor_pos = Some(placement);
-            return placement;
+            match res {
+                Err(BoardError::Shot(err)) => {
+                    panic!("{}", err);
+                }
+                Err(_) => continue,
+                Ok(None) => continue,
+                Ok(Some(placement)) => {
+                    self.last_cursor_pos = Some(placement);
+                    return placement;
+                }
+            }
         }
     }
     fn is_game_over(&self) -> bool {
@@ -81,6 +89,10 @@ impl GamePlayer for Player {
     }
     fn get_name(&self) -> &String {
         &self.name
+    }
+    fn render(&self) {
+        let opponent_board = BoardView::new(self.opponent_board.get_grid(), None, "");
+        self.render_view(&opponent_board);
     }
 }
 impl Setup<Vec<ShipBlueprint>> for Player {

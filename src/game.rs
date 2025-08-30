@@ -165,6 +165,7 @@ impl GameMode for PlayerVsPlayerMode {
                 };
                 // TODO: write winner
             }
+            self.game.current().render();
             self.game.switch();
             // TODO: Add a switch timer/click here
             let wait = WaitForKey::new(Text::from(format!(

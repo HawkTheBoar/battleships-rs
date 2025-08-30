@@ -19,6 +19,7 @@ pub enum ShotError {
     AlreadyShot,
     HiddenDoesntExistOnPlayerBoards,
     OutOfBounds,
+    ShotExit,
 }
 #[derive(Debug, PartialEq, Eq)]
 pub enum PlacementError {
@@ -28,12 +29,17 @@ pub enum PlacementError {
 }
 impl Display for PlacementError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        todo!()
+        f.write_str("placementerror todo")
+    }
+}
+impl Display for ShotError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("shoterror todo")
     }
 }
 impl Display for BoardError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        todo!()
+        f.write_str("boarderror todo")
     }
 }
 impl Error for BoardError {}
