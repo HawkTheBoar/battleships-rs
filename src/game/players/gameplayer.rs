@@ -12,5 +12,5 @@ pub trait GamePlayer: Setup<Vec<ShipBlueprint>> {
     fn is_game_over(&self) -> bool;
     fn process_shot(&mut self, p: Point) -> Result<ShotResult, BoardError>;
     fn update_view_board(&mut self, shot: ShotResult, p: Point) -> Result<(), BoardError>;
-    fn get_name(&self) -> &Option<String>;
+    fn get_name(&self) -> &String;
 }

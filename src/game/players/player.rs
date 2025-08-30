@@ -19,7 +19,7 @@ pub struct Player {
     opponent_board: ViewBoard,
     terminal: Rc<RefCell<ratatui::DefaultTerminal>>,
     last_cursor_pos: Option<Point>,
-    name: Option<String>,
+    name: String,
 }
 impl Player {
     pub fn new(terminal: Rc<RefCell<ratatui::DefaultTerminal>>, name: String) -> Self {
@@ -28,7 +28,7 @@ impl Player {
             opponent_board: ViewBoard::new(),
             terminal,
             last_cursor_pos: None,
-            name: Some(name),
+            name,
         }
     }
     // opponent_board is passed in so that you can select points in choose_point
@@ -79,7 +79,7 @@ impl GamePlayer for Player {
     fn update_view_board(&mut self, shot: ShotResult, p: Point) -> Result<(), BoardError> {
         self.opponent_board.register_shot(shot, p)
     }
-    fn get_name(&self) -> &Option<String> {
+    fn get_name(&self) -> &String {
         &self.name
     }
 }

@@ -13,13 +13,13 @@ use crate::game::{
 
 pub struct Computer {
     board: PlayerBoard,
-    name: Option<String>,
+    name: String,
 }
 impl Computer {
     pub fn new() -> Self {
         Self {
             board: PlayerBoard::new(),
-            name: Some(String::from("Clanker")),
+            name: String::from("Clanker"),
         }
     }
 }
@@ -39,7 +39,7 @@ impl GamePlayer for Computer {
         // this computer just chooses random positions each time
         Ok(())
     }
-    fn get_name(&self) -> &Option<String> {
+    fn get_name(&self) -> &String {
         &self.name
     }
 }
