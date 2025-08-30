@@ -151,7 +151,10 @@ impl PlayerBoard {
                     .for_each(|point| self.grid[point.y][point.x] = Tile::SunkenShip);
                 Ok(ShotResult::ShipSunk(ship_parts))
             }
-            Tile::Empty => Ok(ShotResult::Miss),
+            Tile::Empty => {
+                self.grid[p.y][p.x] = Tile::Miss;
+                Ok(ShotResult::Miss)
+            }
 
             Tile::SunkenShip => Err(BoardError::Shot(ShotError::AlreadyShot)),
             Tile::Hit => Err(BoardError::Shot(ShotError::AlreadyShot)),

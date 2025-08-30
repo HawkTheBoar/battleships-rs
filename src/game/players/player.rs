@@ -1,5 +1,5 @@
 use crossterm::event::Event;
-use ratatui::layout::Rect;
+use ratatui::layout::{Constraint, Direction, Layout};
 
 use crate::game::cursor::Cursor;
 use crate::game::player_board::board_builder::BoardBuilder;
@@ -10,35 +10,46 @@ use crate::game::{
     Setup,
     player_board::{PlayerBoard, ShotResult},
     point::Point,
-    rotation::Rotation,
     ship::ShipBlueprint,
 };
 use std::cell::RefCell;
-use std::io::stdin;
-pub struct Player<'a> {
+use std::rc::Rc;
+pub struct Player {
     board: PlayerBoard,
     opponent_board: ViewBoard,
-    terminal: RefCell<&'a mut ratatui::DefaultTerminal>,
+    terminal: Rc<RefCell<ratatui::DefaultTerminal>>,
     last_cursor_pos: Option<Point>,
+    name: Option<String>,
 }
-impl<'a> Player<'a> {
-    pub fn new(terminal: &'a mut ratatui::DefaultTerminal) -> Self {
+impl Player {
+    pub fn new(terminal: Rc<RefCell<ratatui::DefaultTerminal>>, name: String) -> Self {
         Self {
             board: PlayerBoard::new(),
             opponent_board: ViewBoard::new(),
-            terminal: RefCell::new(terminal),
+            terminal,
             last_cursor_pos: None,
+            name: Some(name),
         }
     }
     // opponent_board is passed in so that you can select points in choose_point
     fn render_view(&self, opponent_board: &BoardView) {
         // TWO BOARD VIEWS FIRST OPPONENT, SECOND SELF
-        self.terminal
-            .borrow_mut()
-            .draw(|f| opponent_board.render(f, f.area()));
+        let self_board = BoardView::new(self.board.get_grid(), None, "Your ships");
+        self.terminal.borrow_mut().draw(|f| {
+            let outer = Layout::default()
+                .direction(Direction::Horizontal)
+                .constraints(vec![Constraint::Percentage(40)])
+                .split(f.area())[0];
+            let layout = Layout::default()
+                .direction(Direction::Vertical)
+                .constraints(vec![Constraint::Percentage(50), Constraint::Percentage(50)])
+                .split(outer);
+            opponent_board.render(f, layout[0]);
+            self_board.render(f, layout[1]);
+        });
     }
 }
-impl<'a> GamePlayer for Player<'a> {
+impl GamePlayer for Player {
     fn choose_point(&mut self) -> Point {
         let last_pos = match self.last_cursor_pos {
             Some(pos) => pos,
@@ -68,8 +79,11 @@ impl<'a> GamePlayer for Player<'a> {
     fn update_view_board(&mut self, shot: ShotResult, p: Point) -> Result<(), BoardError> {
         self.opponent_board.register_shot(shot, p)
     }
+    fn get_name(&self) -> &Option<String> {
+        &self.name
+    }
 }
-impl<'a> Setup<Vec<ShipBlueprint>> for Player<'a> {
+impl Setup<Vec<ShipBlueprint>> for Player {
     fn setup(&mut self, ships: Vec<ShipBlueprint>) {
         for ship in ships.iter() {
             // TODO: add selecting of coordinates to put the ship

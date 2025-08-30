@@ -13,11 +13,13 @@ use crate::game::{
 
 pub struct Computer {
     board: PlayerBoard,
+    name: Option<String>,
 }
 impl Computer {
     pub fn new() -> Self {
         Self {
             board: PlayerBoard::new(),
+            name: Some(String::from("Clanker")),
         }
     }
 }
@@ -36,6 +38,9 @@ impl GamePlayer for Computer {
     fn update_view_board(&mut self, _: ShotResult, _: Point) -> Result<(), BoardError> {
         // this computer just chooses random positions each time
         Ok(())
+    }
+    fn get_name(&self) -> &Option<String> {
+        &self.name
     }
 }
 impl Setup<Vec<ShipBlueprint>> for Computer {

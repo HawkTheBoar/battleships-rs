@@ -6,93 +6,100 @@ mod rotation;
 pub mod ship;
 mod tile;
 
+use std::cell::{Ref, RefCell, RefMut};
+use std::rc::Rc;
+
 use crate::game::player_board::board_view::{self, BoardView};
 use crate::game::players::GamePlayer;
 use crate::game::ship::ShipBlueprint;
+
+pub struct GameResult {
+    pub winner: CurrentPlayer,
+    pub winner_name: Option<String>,
+}
 pub trait GameMode {
-    fn run(&mut self);
+    fn run(self) -> GameResult;
 }
 pub trait Setup<T> {
     fn setup(&mut self, arg: T);
 }
-pub struct SinglePlayer<T, U>
-where
-    T: GamePlayer,
-    U: GamePlayer,
-{
-    player1: T,
-    player2: U,
-    current_player: usize, // Tracks current player (e.g., 1 or 2)
+#[derive(Clone, Copy)]
+pub enum CurrentPlayer {
+    First = 1,
+    Second = 2,
 }
 
-impl<T, U> SinglePlayer<T, U>
-where
-    T: GamePlayer,
-    U: GamePlayer,
-{
-    pub fn new(player1: T, player2: U) -> Self {
+pub struct SinglePlayer {
+    player1: Box<RefCell<dyn GamePlayer>>,
+    player2: Box<RefCell<dyn GamePlayer>>,
+    current_player: CurrentPlayer,
+}
+
+impl SinglePlayer {
+    pub fn new<T, U>(player1: T, player2: U) -> Self
+    where
+        T: GamePlayer + 'static,
+        U: GamePlayer + 'static,
+    {
         Self {
-            player1,
-            player2,
-            current_player: 1,
+            player1: Box::new(RefCell::new(player1)),
+            player2: Box::new(RefCell::new(player2)),
+            current_player: CurrentPlayer::First,
         }
     }
-    // returns (current player, opponent_player)
-    pub fn players(&mut self) -> (&mut dyn GamePlayer, &mut dyn GamePlayer) {
-        if self.is_current_p1() {
-            (&mut self.player1, &mut self.player2)
-        } else {
-            (&mut self.player2, &mut self.player1)
+    fn current(&self) -> &Box<RefCell<dyn GamePlayer>> {
+        match self.current_player {
+            CurrentPlayer::First => &self.player1,
+            CurrentPlayer::Second => &self.player2,
+        }
+    }
+    fn opponent(&self) -> &Box<RefCell<dyn GamePlayer>> {
+        match self.current_player {
+            CurrentPlayer::First => &self.player2,
+            CurrentPlayer::Second => &self.player1,
         }
     }
     pub fn switch(&mut self) {
-        if self.is_current_p1() {
-            self.current_player = 2;
-        } else {
-            self.current_player = 1;
+        self.current_player = match self.current_player {
+            CurrentPlayer::First => CurrentPlayer::Second,
+            CurrentPlayer::Second => CurrentPlayer::First,
         }
     }
-    fn is_current_p1(&self) -> bool {
-        self.current_player == 1
-    }
     pub fn is_game_over(&self) -> bool {
-        self.player1.is_game_over() || self.player2.is_game_over()
+        self.player1.borrow().is_game_over() || self.player2.borrow().is_game_over()
     }
 }
-impl<T, U> GameMode for SinglePlayer<T, U>
-where
-    T: GamePlayer,
-    U: GamePlayer,
-{
-    fn run(&mut self) {
+impl GameMode for SinglePlayer {
+    fn run(mut self) -> GameResult {
         loop {
-            let (curr, opp) = self.players();
-            let point = curr.choose_point();
-            let Ok(shot) = opp.process_shot(point) else {
-                // write error and continue
-                continue;
-            };
-            curr.update_view_board(shot, point)
-                .expect("Out of bounds, unable to show this shot");
-
+            {
+                let mut curr = self.current().borrow_mut();
+                let mut opp = self.opponent().borrow_mut();
+                let point = curr.choose_point();
+                let Ok(shot) = opp.process_shot(point) else {
+                    // write error and continue
+                    continue;
+                };
+                curr.update_view_board(shot, point)
+                    .expect("Out of bounds, unable to show this shot");
+            }
             if self.is_game_over() {
+                return GameResult {
+                    winner: self.current_player,
+                    winner_name: self.current().borrow().get_name().clone(),
+                };
                 // TODO: write winner
-                break;
             }
             self.switch();
         }
         // restore terminal
     }
 }
-impl<T, U> Setup<Vec<ShipBlueprint>> for SinglePlayer<T, U>
-where
-    T: GamePlayer,
-    U: GamePlayer,
-{
+impl Setup<Vec<ShipBlueprint>> for SinglePlayer {
     fn setup(&mut self, ships: Vec<ShipBlueprint>) {
-        // TODO: use lifetimes this clone is okay but triggers me
-        self.player1.setup(ships.clone());
-        self.player2.setup(ships);
+        // TODO: use lifetimes or this clone is okay?
+        self.player1.borrow_mut().setup(ships.clone());
+        self.player2.borrow_mut().setup(ships);
         // let player = self.player();
     }
 }
