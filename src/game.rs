@@ -7,14 +7,13 @@ pub mod ship;
 mod tile;
 pub mod ui;
 
-use std::cell::{Ref, RefCell, RefMut};
+use std::cell::RefCell;
 use std::rc::Rc;
 use std::thread::sleep;
 use std::time::Duration;
 
 use ratatui::text::Text;
 
-use crate::game::player_board::board_view::{self, BoardView};
 use crate::game::players::{GamePlayer, Player};
 use crate::game::ship::ShipBlueprint;
 use crate::game::ui::WaitForKey;
@@ -63,12 +62,13 @@ where
             CurrentPlayer::Second => &self.player2,
         }
     }
-    fn opponent(&self) -> &dyn GamePlayer {
-        match self.current_player {
-            CurrentPlayer::First => &self.player2,
-            CurrentPlayer::Second => &self.player1,
-        }
-    }
+    // fn opponent(&self) -> &dyn GamePlayer {
+    //     match self.current_player {
+    //         CurrentPlayer::First => &self.player2,
+    //         CurrentPlayer::Second => &self.player1,
+    //     }
+    // }
+
     // returns (current_player, opponent_player)
     fn players_mut(&mut self) -> (&mut dyn GamePlayer, &mut dyn GamePlayer) {
         match self.current_player {

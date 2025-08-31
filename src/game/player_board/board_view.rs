@@ -32,7 +32,6 @@ impl<'a> BoardView<'a> {
     pub fn render(&self, f: &mut Frame, rect: Rect) {
         let title: Line = Line::from(self.title);
         let block = Block::bordered().title(title).border_set(border::THICK);
-
         let rows = self
             .grid
             .iter()

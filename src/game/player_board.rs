@@ -99,8 +99,9 @@ impl PlayerBoard {
         blueprint: &ShipBlueprint,
         pos: Point,
         rotation: Rotation,
-    ) -> Result<(), BoardError> {
-        for point in blueprint.parts.iter() {
+    ) -> Result<Vec<Point>, BoardError> {
+        let rotated = blueprint.rotate(rotation);
+        for point in &rotated {
             let (x, y) = (point.x + pos.x, point.y + pos.y);
 
             // TODO: Implement checking for rotated ships
@@ -111,7 +112,7 @@ impl PlayerBoard {
                 return Err(BoardError::ShipPlacementError(PlacementError::ShipOverlap));
             }
         }
-        Ok(())
+        Ok(rotated)
     }
     pub fn is_point_valid(p: Point) -> bool {
         p.x < WIDTH && p.y < HEIGHT
@@ -123,9 +124,8 @@ impl PlayerBoard {
         rotation: Rotation,
     ) -> Result<(), BoardError> {
         // check if can place
-        self.can_place_ship(blueprint, pos, rotation)?;
-        let points: Vec<Point> = blueprint
-            .parts
+        let rotated = self.can_place_ship(blueprint, pos, rotation)?;
+        let points: Vec<Point> = rotated
             .iter()
             .map(|p| Point::new(pos.x + p.x, pos.y + p.y))
             .collect();

@@ -23,7 +23,7 @@ use crate::game::{
 pub struct BoardBuilder<'a> {
     cursor: Cursor,
     rotation: Rotation,
-    current_ship: &'a ShipBlueprint,
+    current_ship: ShipBlueprint,
     board: &'a PlayerBoard,
 }
 impl<'a> BoardBuilder<'a> {
@@ -31,8 +31,8 @@ impl<'a> BoardBuilder<'a> {
         Self {
             board,
             cursor: Cursor::new(0, 0, WIDTH, HEIGHT),
-            current_ship: ship,
-            rotation: Rotation::Horizontal,
+            current_ship: ship.clone(),
+            rotation: Rotation::None,
         }
     }
 
@@ -69,7 +69,7 @@ impl<'a> BoardBuilder<'a> {
         // Validate placement and return position if valid
         if let Err(err) =
             self.board
-                .can_place_ship(self.current_ship, self.cursor.pos(), self.rotation)
+                .can_place_ship(&self.current_ship, self.cursor.pos(), self.rotation)
         {
             Err(err)
         } else {
@@ -79,23 +79,22 @@ impl<'a> BoardBuilder<'a> {
     pub fn render(&self, f: &mut Frame, rect: Rect) {
         let title = Line::from(" Position your ships! ");
         let block = Block::bordered().title(title).border_set(border::THICK);
-
         let cursor = self.cursor.pos();
+
+        let (rotated, can_place) =
+            match self
+                .board
+                .can_place_ship(&self.current_ship, self.cursor.pos(), self.rotation)
+            {
+                Ok(rotated) => (Some(rotated), true),
+                Err(_) => (None, false),
+            };
+        let rotated = rotated.unwrap_or(self.current_ship.rotate(self.rotation));
         // TODO: maybe optimize this someday?
-        let ship_preview = self
-            .current_ship
-            .parts
+        let ship_preview = rotated
             .iter()
             .map(|p| Point::new(p.x + cursor.x, p.y + cursor.y))
             .collect::<Vec<Point>>();
-        let can_place =
-            match self
-                .board
-                .can_place_ship(self.current_ship, self.cursor.pos(), self.rotation)
-            {
-                Ok(_) => true,
-                Err(_) => false,
-            };
         let rows = self
             .board
             .grid

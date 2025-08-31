@@ -36,16 +36,37 @@ impl Player {
         // TWO BOARD VIEWS FIRST OPPONENT, SECOND SELF
         let self_board = BoardView::new(self.board.get_grid(), None, "Your ships");
         self.terminal.borrow_mut().draw(|f| {
-            let outer = Layout::default()
-                .direction(Direction::Horizontal)
-                .constraints(vec![Constraint::Percentage(40)])
-                .split(f.area())[0];
-            let layout = Layout::default()
+            // Create a centered layout for both boards
+            let chunks = Layout::default()
                 .direction(Direction::Vertical)
-                .constraints(vec![Constraint::Percentage(50), Constraint::Percentage(50)])
-                .split(outer);
-            opponent_board.render(f, layout[0]);
-            self_board.render(f, layout[1]);
+                .constraints([
+                    Constraint::Min(0),
+                    Constraint::Length((HEIGHT as u16 + 2) * 2 + 3), // Total height of both boards + spacing
+                    Constraint::Min(0),
+                ])
+                .split(f.area());
+
+            let inner_chunks = Layout::default()
+                .direction(Direction::Horizontal)
+                .constraints([
+                    Constraint::Min(0),
+                    Constraint::Length(WIDTH as u16 + 2), // Width of boards + borders
+                    Constraint::Min(0),
+                ])
+                .split(chunks[1]);
+
+            // Split the centered area for the two boards
+            let board_chunks = Layout::default()
+                .direction(Direction::Vertical)
+                .constraints([
+                    Constraint::Length(HEIGHT as u16 + 2), // Opponent board height
+                    Constraint::Length(1),                 // Spacer
+                    Constraint::Length(HEIGHT as u16 + 2), // Self board height
+                ])
+                .split(inner_chunks[1]);
+
+            opponent_board.render(f, board_chunks[0]);
+            self_board.render(f, board_chunks[2]);
         });
     }
 }

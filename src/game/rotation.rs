@@ -1,9 +1,9 @@
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq)]
 pub enum Rotation {
-    None,
-    Vertical,
-    Horizontal,
-    VerticalAndHorizontal,
+    None = 0,
+    Horizontal = 90,
+    Vertical = 180,
+    VerticalAndHorizontal = 270,
 }
 impl Rotation {
     pub fn next(self) -> Rotation {

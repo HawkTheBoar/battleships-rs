@@ -42,9 +42,7 @@ impl GamePlayer for Computer {
     fn get_name(&self) -> &String {
         &self.name
     }
-    fn render(&self) {
-        return;
-    }
+    fn render(&self) {}
 }
 impl Setup<Vec<ShipBlueprint>> for Computer {
     fn setup(&mut self, ships: Vec<ShipBlueprint>) {
